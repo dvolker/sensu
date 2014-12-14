@@ -5,5 +5,6 @@ module Sensu
     SEVERITIES = %w[ok warning critical unknown]
 
     STOP_SIGNALS = %w[INT TERM]
+    RELOAD_SIGNALS = %w[HUP]
   end
 end

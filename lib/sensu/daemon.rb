@@ -34,6 +34,7 @@ module Sensu
 
     def initialize(options={})
       @state = :initializing
+      @options = options
       @timers = {
         :run => Array.new
       }
@@ -106,7 +107,7 @@ module Sensu
 
     def setup_signal_traps
       @signals = Array.new
-      STOP_SIGNALS.each do |signal|
+      (STOP_SIGNALS + RELOAD_SIGNALS).each do |signal|
         Signal.trap(signal) do
           @signals << signal
         end
@@ -118,7 +119,24 @@ module Sensu
             :signal => signal
           })
           stop
+        elsif RELOAD_SIGNALS.include?(signal)
+          @logger.warn('received signal', {
+            :signal => signal
+          })
+          pause
+          reload_settings
+          resume
         end
+      end
+    end
+
+    def reload_settings
+      new_settings = Settings.load(@options)
+      if new_settings.validate.empty?
+        @settings = new_settings
+        @logger.info('Use new settings')
+      else
+        @logger.info('invalid new settings, keeping old ones')
       end
     end
 
@@ -198,7 +216,6 @@ module Sensu
         @logger.fatal('SENSU NOT RUNNING!')
         exit 2
       end
-      Signal.trap('SIGHUP', 'IGNORE')
       if Kernel.fork
         exit
       end
