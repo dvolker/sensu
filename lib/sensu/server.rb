@@ -12,6 +12,7 @@ module Sensu
       server = self.new(options)
       EM::run do
         server.start
+        server.setup_keepalive_server
         server.setup_signal_traps
       end
     end
@@ -21,6 +22,30 @@ module Sensu
       @is_master = false
       @timers[:master] = Array.new
       @handlers_in_progress_count = 0
+    end
+
+    def process_server_result(error, name)
+      process_result(
+        client: 'server',
+        check: {
+          name: name,
+          issued: Time.now.to_i,
+          output: error.message,
+          duration: 1,
+          status: 2,
+          executed: Time.now.to_i
+        }
+      )
+    end
+
+    def setup_keepalive_transport
+      @logger.debug('watching the transport')
+      @transport.on_error do |error|
+        process_server_result(error, 'transport_check')
+      end
+      @redis.on_error do |error|
+        process_server_result(error, 'redis_check')
+      end
     end
 
     def setup_keepalives
