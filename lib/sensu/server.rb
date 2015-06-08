@@ -12,7 +12,6 @@ module Sensu
       server = self.new(options)
       EM::run do
         server.start
-        server.setup_keepalive_server
         server.setup_signal_traps
       end
     end
@@ -38,7 +37,7 @@ module Sensu
       )
     end
 
-    def setup_keepalive_transport
+    def setup_keepalive_server
       @logger.debug('watching the transport')
       @transport.on_error do |error|
         process_server_result(error, 'transport_check')
@@ -748,6 +747,7 @@ module Sensu
       setup_keepalives
       setup_results
       setup_master_monitor
+      setup_keepalive_server
       @state = :running
     end
 
